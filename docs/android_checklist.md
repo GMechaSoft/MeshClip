@@ -14,6 +14,7 @@
 - [ ] **USB Connectivity:** Validated data cable for initial ADB setup.
 
 ## 3. Technical Dependencies & Frameworks
+- [ ] **Architecture Validation:** Project structure implements Domain, Infrastructure, and Presentation layers (Hexagonal/DDD).
 - [ ] **Shizuku API:** Added to `build.gradle` and properly linked.
 - [ ] **AIDL Definition:** `IClipboardManager.aidl` implemented and compiled.
 - [ ] **UI Framework:** Jetpack Compose with Material 3.
@@ -27,6 +28,7 @@
 - [ ] **QR Utility:** Tool for generating/scanning pairing codes.
 
 ## 5. Validation Criteria
+- [ ] **Architectural Integrity:** No leak of infrastructure dependencies (Shizuku/Sockets) into the Domain layer.
 - [ ] **Shizuku Permission:** App can successfully request and obtain Shizuku permissions.
 - [ ] **Background Access:** Ability to detect clipboard changes while the app is not in the foreground.
 - [ ] **Network Integrity:** Verified 3-burst UDP transmission (0ms, 100ms, 300ms).

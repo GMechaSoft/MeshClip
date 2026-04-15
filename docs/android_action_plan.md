@@ -1,54 +1,62 @@
-# Action Plan: Android Client Implementation
+# Action Plan: Android Client Implementation (Hexagonal Architecture & DDD)
 
 ## Context
-Implementation of a decentralized P2P LAN clipboard synchronization client for Android. The system requires high-privilege background access to the clipboard via Shizuku API to bypass Android 10+ (API 29) background restrictions.
+Implementation of a decentralized P2P LAN clipboard synchronization client for Android. The system uses a high-privilege background access model via Shizuku API to bypass Android 10+ (API 29) restrictions, organized under a Hexagonal Architecture to ensure testability and maintainability.
 
-## Architecture
-- **Pattern:** MVVM (Model-View-ViewModel).
-- **UI:** Jetpack Compose.
-- **Concurrency:** Kotlin Coroutines & Flow.
-- **Persistence:** Foreground Service for network listening and clipboard monitoring.
+## Architectural Blueprint
+- **Domain Layer:** Pure Kotlin. Contains Entities, Use Cases, and Ports. No Android dependencies.
+- **Infrastructure Layer:** Adapters implementing Domain Ports (Shizuku, UDP/TCP Sockets, Keystore).
+- **Presentation Layer:** Jetpack Compose UI and ViewModels invoking Domain Use Cases.
+- **Dependency Flow:** Presentation $\rightarrow$ Domain $\leftarrow$ Infrastructure.
 
 ## Implementation Strategy
 
-### Phase 1: Privilege & System Integration
-- Setup Shizuku API and `IClipboardManager.aidl` interface.
-- Implement permission request flow (`Shizuku.checkSelfPermission`).
-- Develop `ClipboardAidlHelper` to bridge the app with the system clipboard binder.
-- **Constraint:** Zero-polling policy; use `OnPrimaryClipChangedListener`.
+### Phase 1: Domain Definition (The Core)
+- [ ] **Define Entities:** Implement `ClipboardPayload`, `Device`, and `SyncSession` value objects.
+- [ ] **Define Ports:** Create interfaces for `ClipboardPort`, `NetworkPort`, and `SecurityPort`.
+- [ ] **Implement Use Cases:**
+    - `SyncClipboardUseCase`: Logic for handling clipboard changes and triggering network emission.
+    - `PairDeviceUseCase`: Logic for device discovery and credential exchange.
+    - `DeduplicationService`: Pure logic to prevent processing duplicate UDP packets.
 
-### Phase 2: Background Persistence
-- Implement `ClipboardService` as a `Foreground Service`.
-- Configure persistent notification to prevent OS process killing.
-- Integrate the service lifecycle with Shizuku's binder management.
+### Phase 2: Infrastructure Adapters (The Implementation)
+- [ ] **Clipboard Adapter:**
+    - Setup `IClipboardManager.aidl`.
+    - Implement `ShizukuClipboardAdapter` implementing `ClipboardPort`.
+    - Implement reactive listener via `OnPrimaryClipChangedListener`.
+- [ ] **Network Adapter:**
+    - Implement `UdpNetworkAdapter` with the triple-burst strategy (0ms, 100ms, 300ms).
+    - Implement `TcpStreamAdapter` for binary file streaming.
+    - Implement mDNS discovery for node announcement.
+- [ ] **Security Adapter:**
+    - Implement `AndroidKeyStoreAdapter` implementing `SecurityPort` for AES-256-GCM.
+- [ ] **Persistence Adapter:**
+    - Implement `DeviceRepository` for storing paired devices and group IDs.
 
-### Phase 3: Networking Engine (Hybrid Model)
-- **UDP Engine:** Implement `DatagramSocket` with a triple-burst strategy (0ms, 100ms, 300ms) for text/URLs.
-- **Deduplication:** Implement a message ID cache to discard redundant UDP packets.
-- **mDNS Discovery:** Implement passive node announcement for P2P discovery.
-- **TCP Streaming:** Implement on-demand TCP sockets for binary file transfer using streams to minimize RAM overhead.
+### Phase 3: Presentation Layer & Integration
+- [ ] **DI Setup:** Configure Hilt/Koin to bind Ports to their respective Adapters.
+- [ ] **ViewModels:** Implement `SyncViewModel` and `PairingViewModel` to bridge Domain use cases to the UI.
+- [ ] **UI Screens:** Build Pairing, Settings, and Status screens using Jetpack Compose.
+- [ ] **Foreground Service:** Implement `ClipboardService` as the primary entry point that initializes the infrastructure and Domain use cases.
 
-### Phase 4: Security & Encryption
-- **Cryption:** Implement AES-256-GCM for end-to-end encryption of all payloads.
-- **Key Storage:** Use Android Keystore System to securely store the `master_key`.
-- **Pairing Flow:**
-    - QR-based exchange of `group_id` and keys.
-    - ECDH (Elliptic Curve Diffie-Hellman) exchange with 6-digit PIN validation.
+### Phase 4: Validation & Stress Testing
+- [ ] **Unit Testing:** Validate Domain use cases and deduplication logic via JVM tests.
+- [ ] **Integration Testing:** Verify Shizuku permissions and background clipboard access.
+- [ ] **Network Validation:** Use Wireshark to verify AES-256-GCM and triple-burst UDP.
+- [ ] **Performance Testing:** Transfer files >100MB to verify TCP streaming efficiency.
 
-### Phase 5: UI & Final Integration
-- Build configuration and pairing screens using Jetpack Compose.
-- Implement state management in ViewModels for connection status.
-- End-to-end testing with Windows and Linux clients.
-
-## Critical Files to Create
-- `service/ClipboardService.kt`: Foreground service core.
-- `data/shizuku/ClipboardAidlHelper.kt`: Shizuku/AIDL bridge.
-- `data/network/UdpNetworkManager.kt`: UDP burst logic.
-- `data/network/TcpFileStreamer.kt`: Binary stream handler.
-- `data/local/KeyStoreManager.kt`: Secure key management.
+## Critical Package Structure
+- `com.gmechasoft.meshclip.domain.model`
+- `com.gmechasoft.meshclip.domain.ports`
+- `com.gmechasoft.meshclip.domain.usecase`
+- `com.gmechasoft.meshclip.infrastructure.clipboard`
+- `com.gmechasoft.meshclip.infrastructure.network`
+- `com.gmechasoft.meshclip.infrastructure.security`
+- `com.gmechasoft.meshclip.presentation.ui`
+- `com.gmechasoft.meshclip.presentation.viewmodel`
 
 ## Verification Plan
-1. **Permission Test:** Confirm background clipboard access via Shizuku.
-2. **Network Test:** Verify text synchronization across different OS platforms.
-3. **Security Test:** Use Wireshark to ensure no plaintext data is transmitted.
-4. **Stress Test:** Transfer files >100MB to verify streaming efficiency.
+1. **Architectural Audit:** Ensure no Android/Third-party leaks in the `domain` package.
+2. **Functional Test:** Text sync across Android $\leftrightarrow$ Windows/Linux.
+3. **Security Audit:** Confirm zero plaintext transmission of credentials.
+4. **Stability Test:** Verify service persistence under OS memory pressure.

@@ -10,10 +10,15 @@ Multiplatform system for real-time synchronization of clipboard events within a 
 ## 2. Client Architecture (By Operating System)
 
 ### 2.1 Android Client (Android 10+ / API 29+)
+* **Architecture:** Hexagonal Architecture (Ports & Adapters) with DDD.
 * **Language and UI:** Kotlin / Jetpack Compose. MVVM Pattern.
+* **Layering:**
+    - **Domain:** Pure Kotlin logic, Entities, Use Cases, and Ports.
+    - **Infrastructure:** Adapters for Shizuku (Clipboard), Sockets (Network), and Keystore (Security).
+    - **Presentation:** Jetpack Compose UI and ViewModels.
 * **Background and Concurrency:** `Foreground Service` (Mandatory persistent notification). `Kotlin Coroutines` for asynchronous network handling.
 * **Network Layer:** `java.net.DatagramSocket` (UDP) and TCP sockets (on-demand streaming).
-* **Core / Clipboard:** **Shizuku** API. Compatible with **Wireless ADB** (manual activation after reboot) and **Root** (for automatic service startup). Use of AIDL interfaces (`IClipboardManager`) to register listeners and execute background read/writes in pure reactive mode.
+* **Core / Clipboard:** **Shizuku** API. Compatible with **Wireless ADB** and **Root**. Use of AIDL interfaces (`IClipboardManager`) to register listeners and execute background read/writes in pure reactive mode.
 * **Storage:** Android Keystore System.
 
 ### 2.2 Windows Client
